@@ -33,6 +33,9 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Override local de la dependencia growtogether_data (path local en dev, git ref en CI)
+pubspec_overrides.yaml
+
 # Symbolication related
 app.*.symbols
 

@@ -1,0 +1,130 @@
+name: Deploy Admin web
+
+# Despliegue del panel admin (Flutter web). Misma logica que el workflow de
+# APP, con dos diferencias clave:
+#   - El admin se sirve bajo /admin/ del dominio, NO en la raiz. Por eso
+#     --base-href=/admin/ y los estaticos van a /opt/growtogether/admin/.
+#   - Solo build web (no hay APK: el admin es solo panel web para profesores
+#     y operadores).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'web/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+# Cancela ejecuciones anteriores si pusheas dos veces seguidas: solo nos
+# interesa desplegar el ultimo commit, no encadenar runs.
+concurrency:
+  group: deploy-admin
+  cancel-in-progress: true
+
+env:
+  API_URL: https://growtogether.jordipatuel.com/api/v1
+
+jobs:
+  web:
+    name: Build admin web + deploy a EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Cargar la clave privada de DATA en el ssh-agent. Asi cuando flutter
+      # pub get intenta clonar https://github.com/devPatuel/GrowTogetherDATA,
+      # el siguiente paso (insteadOf) lo redirige a SSH y se autentica con
+      # esta clave (que es la que registramos como deploy key en DATA).
+      - name: Configurar SSH agent con DATA_REPO_KEY
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DATA_REPO_KEY }}
+
+      # Forzar git a usar SSH para clonar GrowTogetherDATA aunque pubspec
+      # apunte a https. La deploy key SSH solo es valida para SSH protocol.
+      - name: Forzar SSH para clonar DATA
+        run: |
+          git config --global url."git@github.com:devPatuel/GrowTogetherDATA.git".insteadOf "https://github.com/devPatuel/GrowTogetherDATA.git"
+
+      # Borrar pubspec_overrides.yaml: en local redirige al path local,
+      # pero en CI tenemos que usar el git ref del pubspec.
+      - name: Borrar pubspec_overrides.yaml
+        run: rm -f pubspec_overrides.yaml
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      # flutter analyze NO bloquea el deploy: warnings/info son ruido en
+      # cada release. La validacion estricta vive en otro workflow (PR check)
+      # cuando se monte. Aqui solo nos importa que el build COMPILE.
+      - name: flutter analyze (informativo, no bloquea)
+        run: flutter analyze || true
+
+      # Build web inyectando la URL real de la API y la base-href /admin/
+      # para que las rutas relativas (assets, deeplinks) resuelvan bajo
+      # https://growtogether.jordipatuel.com/admin/.
+      - name: Build web
+        run: |
+          flutter build web --release \
+            --dart-define=API_URL=${{ env.API_URL }} \
+            --base-href=/admin/
+
+      # Empaquetar el build en un tar.gz para SCP rapido.
+      - name: Empaquetar build
+        run: tar -czf admin.tar.gz -C build/web .
+
+      # Copiar el tar.gz a /tmp de la EC2.
+      - name: SCP tar a EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: admin.tar.gz
+          target: /tmp/
+
+      # Extraer con swap atomico: descomprimimos en una carpeta nueva y al
+      # final movemos. Asi nunca hay un estado intermedio donde nginx sirva
+      # archivos a medio escribir. Si la extraccion falla, la carpeta vieja
+      # sigue intacta.
+      - name: SSH a EC2 y swap atomico
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            echo "===== EXTRAER ====="
+            sudo rm -rf /opt/growtogether/admin.new
+            sudo mkdir -p /opt/growtogether/admin.new
+            sudo tar -xzf /tmp/admin.tar.gz -C /opt/growtogether/admin.new
+
+            echo "===== SWAP ATOMICO ====="
+            sudo rm -rf /opt/growtogether/admin.old
+            if [ -d /opt/growtogether/admin ]; then
+              sudo mv /opt/growtogether/admin /opt/growtogether/admin.old
+            fi
+            sudo mv /opt/growtogether/admin.new /opt/growtogether/admin
+
+            echo "===== RELOAD NGINX ====="
+            sudo nginx -t
+            sudo systemctl reload nginx
+
+            echo "===== LIMPIAR ====="
+            rm -f /tmp/admin.tar.gz
+            sudo rm -rf /opt/growtogether/admin.old
+
+            echo "===== VERIFICAR ====="
+            curl -sf -o /dev/null https://growtogether.jordipatuel.com/admin/ && echo "Deploy OK" || (echo "Deploy FALLO" && exit 1)
