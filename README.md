@@ -154,6 +154,17 @@ publícala desde un workflow.
 
 ---
 
+## Decisiones de arquitectura
+
+Las decisiones técnicas (Flutter Web vs React/Vue, reuso del paquete
+`growtogether_data`, `data_table_2` + `fl_chart`, almacenamiento del
+token, etc.) están documentadas en
+[`docs/DECISIONS.md`](docs/DECISIONS.md). Las del paquete de datos
+compartido viven en `GrowTogetherDATA/docs/DECISIONS.md` y las del
+backend en `GrowTogetherAPI/docs/DECISIONS.md`.
+
+---
+
 ## Notas de seguridad
 
 - El token JWT se guarda en `flutter_secure_storage`, que en web cae en
