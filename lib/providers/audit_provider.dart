@@ -64,8 +64,11 @@ class AuditProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _logs = await _repo.listarAuditLog();
-    } catch (e) {
+      debugPrint('[AuditProvider] cargar() OK - ${_logs.length} registros recibidos');
+    } catch (e, stack) {
       _error = e.toString();
+      debugPrint('[AuditProvider] cargar() ERROR: $e');
+      debugPrint('$stack');
     } finally {
       _cargando = false;
       notifyListeners();

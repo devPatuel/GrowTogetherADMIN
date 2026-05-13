@@ -123,23 +123,51 @@ class _AuditScreenState extends State<AuditScreen> {
                             ],
                           ),
                         )
-                      : PaginatedDataTable2(
-                          columnSpacing: 12,
-                          horizontalMargin: 16,
-                          minWidth: 1000,
-                          rowsPerPage: 25,
-                          headingRowColor: WidgetStateProperty.all(colorScheme.surfaceContainerLow),
-                          columns: const [
-                            DataColumn2(label: Text('Fecha'), fixedWidth: 160),
-                            DataColumn2(label: Text('Admin'), size: ColumnSize.M),
-                            DataColumn2(label: Text('Acción'), fixedWidth: 130),
-                            DataColumn2(label: Text('Entidad'), fixedWidth: 110),
-                            DataColumn2(label: Text('ID'), fixedWidth: 70),
-                            DataColumn2(label: Text('Detalle'), size: ColumnSize.L),
-                            DataColumn2(label: Text('IP'), fixedWidth: 130),
-                          ],
-                          source: _AuditSource(estado.logs),
-                        ),
+                      : estado.logs.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.history_toggle_off, color: colorScheme.outline, size: 48),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'No hay registros de auditoría',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Las acciones administrativas aparecerán aquí.',
+                                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : PaginatedDataTable2(
+                              columnSpacing: 12,
+                              horizontalMargin: 16,
+                              minWidth: 1000,
+                              rowsPerPage: 25,
+                              headingRowColor: WidgetStateProperty.all(colorScheme.surfaceContainerLow),
+                              empty: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Text(
+                                    'Sin resultados con los filtros aplicados',
+                                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                                  ),
+                                ),
+                              ),
+                              columns: const [
+                                DataColumn2(label: Text('Fecha'), fixedWidth: 160),
+                                DataColumn2(label: Text('Admin'), size: ColumnSize.M),
+                                DataColumn2(label: Text('Acción'), fixedWidth: 130),
+                                DataColumn2(label: Text('Entidad'), fixedWidth: 110),
+                                DataColumn2(label: Text('ID'), fixedWidth: 70),
+                                DataColumn2(label: Text('Detalle'), size: ColumnSize.L),
+                                DataColumn2(label: Text('IP'), fixedWidth: 130),
+                              ],
+                              source: _AuditSource(estado.logs),
+                            ),
             ),
           ),
         ],
