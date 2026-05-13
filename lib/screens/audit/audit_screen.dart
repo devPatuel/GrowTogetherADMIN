@@ -97,7 +97,6 @@ class _AuditScreenState extends State<AuditScreen> {
                 icon: const Icon(Icons.clear, size: 18),
                 label: const Text('Limpiar'),
               ),
-              const Spacer(),
               FilledButton.tonalIcon(
                 onPressed: estado.cargando ? null : () => estado.cargar(),
                 icon: const Icon(Icons.refresh),
