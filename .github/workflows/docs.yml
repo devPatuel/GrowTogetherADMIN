@@ -1,0 +1,70 @@
+name: Generar y publicar DartDoc
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-docs:
+    name: Generar DartDoc
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # En local usamos pubspec_overrides.yaml para apuntar a la ruta de DATA.
+      # En CI, ese archivo apunta a una ruta inexistente, hay que borrarlo
+      # para que pub get use la dependencia git declarada en pubspec.yaml.
+      - name: Borrar pubspec_overrides.yaml
+        run: rm -f pubspec_overrides.yaml
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Generar DartDoc
+        run: dart doc . --output doc/api
+
+      - name: Subir DartDoc como artifact descargable
+        uses: actions/upload-artifact@v4
+        with:
+          name: dartdoc-html
+          path: doc/api/
+          retention-days: 30
+
+      - name: Preparar artifact para GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: doc/api/
+
+  deploy-pages:
+    name: Desplegar a GitHub Pages
+    needs: build-docs
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
