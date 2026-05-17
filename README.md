@@ -19,9 +19,12 @@ diarios, métricas de la plataforma, auditoría y alta de nuevos administradores
 - **data_table_2** para tablas con scroll, sort y paginación
 - **intl** para formateo de fechas en español
 
-La capa de datos (`growtogether_data`) es un paquete local compartido con la app
-móvil de GrowTogether. Vive un nivel arriba del proyecto, en la carpeta
-`GrowTogetherDATA/`. Aquí se importa por path.
+La capa de datos (`growtogether_data`) es un paquete Dart compartido con la app
+móvil de GrowTogether. En CI y producción se importa por **git + tag** (`ref: vX.Y.Z`)
+desde el repo `devPatuel/GrowTogetherDATA`. En desarrollo local se sobreescribe con
+`pubspec_overrides.yaml` apuntando a `path: ../GrowTogetherDATA` para iterar sin
+publicar tags; ese override está en `.gitignore` y el workflow de CI lo borra
+antes del build.
 
 ---
 
@@ -44,7 +47,9 @@ móvil de GrowTogether. Vive un nivel arriba del proyecto, en la carpeta
   cómodo es levantarla con el `docker-compose.local.yml` del repo padre, que
   expone la API en `http://localhost:8081`.
 - El paquete **`growtogether_data`** disponible en `../GrowTogetherDATA/`
-  (ya se referencia por path desde `pubspec.yaml`).
+  para desarrollo local (con `pubspec_overrides.yaml` apuntando a `path:`).
+  En CI/producción se descarga automáticamente del repo git declarado
+  en `pubspec.yaml`.
 
 ---
 
