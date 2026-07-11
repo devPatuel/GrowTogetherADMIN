@@ -1,25 +1,48 @@
-# GrowTogether Admin
+# GrowTogether ADMIN
 
-Panel de administración web del ecosistema **GrowTogether**, una aplicación de
-seguimiento de hábitos y desafíos compartidos. Este módulo está pensado
-exclusivamente para uso interno del equipo: gestión de usuarios, consejos
-diarios, métricas de la plataforma, auditoría y alta de nuevos administradores.
+> Panel de administración web del ecosistema **GrowTogether**: gestión de usuarios, consejos diarios, métricas y auditoría.
 
-> ⚠️ Solo se ejecuta en navegador. No tiene build para móvil ni escritorio.
+![Flutter](https://img.shields.io/badge/Flutter-Web-02569B?logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-3.10%2B-0175C2?logo=dart&logoColor=white)
+![Provider](https://img.shields.io/badge/State-Provider%206.x-4CAF50)
+![fl_chart](https://img.shields.io/badge/Gr%C3%A1ficos-fl__chart-FF6F00)
+![Dio](https://img.shields.io/badge/HTTP-Dio%205.x-1E88E5)
 
 ---
 
-## Stack
+## Sobre el proyecto
+
+**GrowTogether** es una aplicación de seguimiento de hábitos con componente social, inspirada en *Atomic Habits* de James Clear: construye hábitos consistentes, visualiza tu progreso y compite con amigos en desafíos.
+
+Es el **Trabajo Final de Grado de DAM** (Desarrollo de Aplicaciones Multiplataforma, 2025/2026) de **Jordi Patuel Pons**.
+
+### Papel de este repositorio
+
+Este repo contiene el **panel de administración web** (Flutter Web), pensado exclusivamente para uso interno del equipo: gestión de usuarios, consejos diarios, métricas de la plataforma, auditoría y alta de nuevos administradores.
+
+> ⚠️ Solo se ejecuta en navegador. No tiene build para móvil ni escritorio.
+
+## Ecosistema GrowTogether
+
+| Repositorio | Descripción |
+|---|---|
+| [GrowTogetherAPI](https://github.com/devPatuel/GrowTogetherAPI) | Backend REST (Java 17 + Spring Boot) |
+| [GrowTogetherAPP](https://github.com/devPatuel/GrowTogetherAPP) | App móvil de hábitos (Flutter) |
+| **[GrowTogetherADMIN](https://github.com/devPatuel/GrowTogetherADMIN)** ← estás aquí | Panel de administración web (Flutter Web) |
+| [GrowTogetherDATA](https://github.com/devPatuel/GrowTogetherDATA) | Paquete Dart compartido: modelos, cliente HTTP y repositorios |
+
+---
+
+## Stack técnico
 
 - **Flutter Web** (Dart SDK ^3.10.4)
 - **Provider** para gestión de estado
-- **Dio** (a través del paquete compartido `growtogether_data`) para el
-  acceso a la API REST
+- **Dio 5.x** para el acceso a la API REST (cliente compartido en `growtogether_data`)
 - **fl_chart** para gráficos del dashboard
 - **data_table_2** para tablas con scroll, sort y paginación
 - **intl** para formateo de fechas en español
 
-La capa de datos (`growtogether_data`) es un paquete Dart compartido con la app
+La capa de datos ([`growtogether_data`](https://github.com/devPatuel/GrowTogetherDATA)) es un paquete Dart compartido con la app
 móvil de GrowTogether. En CI y producción se importa por **git + tag** (`ref: vX.Y.Z`)
 desde el repo `devPatuel/GrowTogetherDATA`. En desarrollo local se sobreescribe con
 `pubspec_overrides.yaml` apuntando a `path: ../GrowTogetherDATA` para iterar sin
@@ -40,20 +63,15 @@ antes del build.
 
 ---
 
-## Requisitos previos
+## Cómo ejecutarlo en local
+
+### Requisitos previos
 
 - **Flutter** 3.38+ (con soporte web habilitado: `flutter config --enable-web`).
-- La **API de GrowTogether** corriendo y accesible desde el navegador. Lo más
-  cómodo es levantarla con el `docker-compose.local.yml` del repo padre, que
-  expone la API en `http://localhost:8081`.
-- El paquete **`growtogether_data`** disponible en `../GrowTogetherDATA/`
-  para desarrollo local (con `pubspec_overrides.yaml` apuntando a `path:`).
-  En CI/producción se descarga automáticamente del repo git declarado
-  en `pubspec.yaml`.
+- La **[API de GrowTogether](https://github.com/devPatuel/GrowTogetherAPI)** corriendo y accesible desde el navegador en `http://localhost:8081` (ver su README).
+- El paquete **`growtogether_data`** se descarga automáticamente del repo git declarado en `pubspec.yaml`. Para iterar sobre él en local, clónalo en `../GrowTogetherDATA/` y crea un `pubspec_overrides.yaml` apuntando a ese `path:`.
 
----
-
-## Arrancar en local
+### Arrancar
 
 ```bash
 flutter pub get
@@ -74,20 +92,18 @@ Luego abre `http://localhost:7780` en tu navegador.
 ### Crear el primer admin
 
 El sistema solo permite crear administradores desde otro admin. Para arrancar
-de cero, inserta uno directamente en la base de datos. Con el `docker-compose`
-del repo padre:
+de cero, inserta uno directamente en la base de datos PostgreSQL:
 
-```bash
-docker exec growtogether-postgres-local psql -U gt -d growtogether -c "
+```sql
 INSERT INTO usuarios (nombre, email, password, rol, fecha_registro, puntos_totales, token_version, activo, tema, idioma)
 VALUES ('Admin', 'admin@growtogether.com',
-        '\$2a\$10\$REEMPLAZA_POR_BCRYPT', 'ADMIN', NOW(), 0, 0, true, 'CLARO', 'es');
-"
+        '$2a$10$REEMPLAZA_POR_BCRYPT', 'ADMIN', NOW(), 0, 0, true, 'CLARO', 'es');
 ```
 
 El hash BCrypt puedes generarlo con cualquier utilidad online o con un endpoint
 de prueba. Una vez exista al menos un admin, los siguientes se crean desde la
-pestaña **Crear admin** del panel.
+pestaña **Crear admin** del panel. Si has sembrado el `data.sql` de la API, ya
+existe el admin de prueba `admin@growtogether.com` / `Prueba123`.
 
 ---
 
@@ -131,7 +147,7 @@ lib/
 
 ---
 
-## Generar documentación API (`dart doc`)
+## Generar documentación (`dart doc`)
 
 Todas las clases públicas tienen comentarios `///` con el formato Dart estándar.
 Para generar la documentación HTML:
@@ -165,8 +181,10 @@ Las decisiones técnicas (Flutter Web vs React/Vue, reuso del paquete
 `growtogether_data`, `data_table_2` + `fl_chart`, almacenamiento del
 token, etc.) están documentadas en
 [`docs/DECISIONS.md`](docs/DECISIONS.md). Las del paquete de datos
-compartido viven en `GrowTogetherDATA/docs/DECISIONS.md` y las del
-backend en `GrowTogetherAPI/docs/DECISIONS.md`.
+compartido viven en
+[`GrowTogetherDATA/docs/DECISIONS.md`](https://github.com/devPatuel/GrowTogetherDATA/blob/main/docs/DECISIONS.md)
+y las del backend en
+[`GrowTogetherAPI/docs/DECISIONS.md`](https://github.com/devPatuel/GrowTogetherAPI/blob/main/docs/DECISIONS.md).
 
 ---
 
@@ -187,4 +205,4 @@ backend en `GrowTogetherAPI/docs/DECISIONS.md`.
 
 ## Licencia
 
-Proyecto académico — GrowTogether (DAM, Jordi Patuel Pons).
+Proyecto académico — Trabajo Final de Grado de DAM · GrowTogether · Jordi Patuel Pons.
